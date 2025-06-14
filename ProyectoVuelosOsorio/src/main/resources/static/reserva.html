@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Reservar Vuelo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+<a href="index.html"
+   class="absolute top-4 left-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow transition">
+    ← Volver a página inicial
+</a>
+<div class="min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded shadow-md w-full max-w-6xl mx-auto">
+        <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">¡Reserva el vuelo!</h2>
+
+        <form id="reservaForm" class="space-y-4">
+            <div>
+                <label for="cantidadPago" class="block text-sm font-medium text-gray-700">Cantidad de Pago</label>
+                <input type="number" id="cantidadPago" name="cantidadPago" required
+                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
+            </div>
+
+            <div>
+                <label for="vueloSelect" class="block text-sm font-medium text-gray-700">Número de Vuelo</label>
+                <select id="vueloSelect" name="vuelo" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    <option value="">Seleccione un vuelo</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="asientoSelect" class="block text-sm font-medium text-gray-700">Asiento</label>
+                <select id="asientoSelect" name="asiento" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    <option value="">Seleccione un asiento</option>
+                </select>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">
+                Confirmar Reserva
+            </button>
+        </form>
+
+        <!-- Tabla de reservas -->
+        <div class="mt-10">
+            <h3 class="text-lg font-semibold mb-2">Reservas realizadas</h3>
+            <table class="w-full border border-gray-400 table-auto">
+                <thead class="bg-gray-200">
+                <tr>
+                    <th class="border border-gray-400 px-4 py-2">Vuelo</th>
+                    <th class="border border-gray-400 px-4 py-2">Fecha</th>
+                    <th class="border border-gray-400 px-4 py-2">Avion</th>
+                    <th class="border border-gray-400 px-4 py-2">Asiento</th>
+                    <th class="border border-gray-400 px-4 py-2">Aerolinea</th>
+                    <th class="border border-gray-400 px-4 py-2">Piloto</th>
+                    <th class="border border-gray-400 px-4 py-2">Pago</th>
+                </tr>
+                </thead>
+                <tbody id="reservaTablaBody">
+                <tr>
+                    <td colspan="4" class="text-center text-gray-500 py-4">No hay reservas aún</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const vueloSelect = document.getElementById("vueloSelect");
+    const asientoSelect = document.getElementById("asientoSelect");
+    const reservaTablaBody = document.getElementById("reservaTablaBody");
+
+    // Cargar vuelos en el select
+    fetch("http://localhost:8080/api/v1/vuelo")
+        .then(res => res.json())
+        .then(data => {
+            data.forEach(vuelo => {
+                const option = document.createElement("option");
+                option.value = vuelo.id;
+                option.textContent = `Vuelo ${vuelo.numeroVuelo}`;
+                vueloSelect.appendChild(option);
+            });
+        });
+
+    // Cargar asientos disponibles al cambiar el vuelo
+    vueloSelect.addEventListener("change", () => {
+        const vueloId = vueloSelect.value;
+        asientoSelect.innerHTML = '<option value="">Seleccione un asiento</option>';
+
+        if (!vueloId) return;
+
+        fetch(`http://localhost:8080/api/v1/vuelo/${vueloId}`)
+            .then(res => res.json())
+            .then(vuelo => {
+                vuelo.avion.asientos.forEach(asiento => {
+                    const option = document.createElement("option");
+                    option.value = asiento.id;
+                    option.textContent = `Fila ${asiento.filaAsiento}${asiento.letraAsiento} (${asiento.claseAsiento})`;
+                    asientoSelect.appendChild(option);
+                });
+            });
+    });
+
+    // Enviar reserva
+    document.getElementById("reservaForm").addEventListener("submit", function(e) {
+        e.preventDefault();
+
+        const pago = document.getElementById("cantidadPago").value;
+        const vueloId = vueloSelect.value;
+        const asientoId = asientoSelect.value;
+
+        const reserva = {
+            pago: {
+                cantidadPago: parseFloat(pago)
+            },
+            vuelo: {
+                id: parseInt(vueloId)
+            },
+            asientoReservado: {
+                id: parseInt(asientoId)
+            }
+        };
+
+        fetch("http://localhost:8080/api/v1/reserva/save", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(reserva)
+        })
+        .then(res => res.json())
+        .then(saved => {
+            alert("Reserva realizada con éxito!");
+            cargarReservas();
+        })
+        .catch(err => alert("Error al guardar reserva"));
+    });
+
+    // Cargar reservas para mostrarlas
+    function cargarReservas() {
+        fetch("http://localhost:8080/api/v1/reserva")
+            .then(res => res.json())
+            .then(data => {
+                reservaTablaBody.innerHTML = "";
+                if (!data.length) {
+                    reservaTablaBody.innerHTML = `<tr><td colspan='5' class='text-center text-gray-500 py-4'>No hay reservas aún</td></tr>`;
+                    return;
+                }
+
+                data.forEach(res => {
+                    reservaTablaBody.innerHTML += `
+                        <tr>
+                            <td class="border px-4 py-2">${res.vuelo?.numeroVuelo ?? "N/D"}</td>
+                            <td class="border px-4 py-2">${res.vuelo?.fechaSalida?.fecha ?? "N/D"}</td>
+                            <td class="border px-4 py-2">${res.vuelo?.avion?.numeroAvion ?? "N/D"}</td>
+                            <td class="border px-4 py-2">${res.asientoReservado?.filaAsiento ?? ""}${res.asientoReservado?.letraAsiento ?? ""}</td>
+                            <td class="border px-4 py-2">${res.vuelo?.aerolinea?.nombreAerolinea ?? "N/D"}</td>
+                            <td class="border px-4 py-2">${res.vuelo?.piloto?.nombre ?? "N/D"}</td>
+                            <td class="border px-4 py-2">$${res.pago?.cantidadPago ?? "N/D"}</td>
+                        </tr>
+                    `;
+                });
+            });
+    }
+
+    // Inicializar reservas al cargar
+    cargarReservas();
+</script>
+
+</body>
+</html>

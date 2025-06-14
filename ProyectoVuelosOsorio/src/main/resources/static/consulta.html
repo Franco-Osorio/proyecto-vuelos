@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Consulta de Vuelos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+<a href="index.html"
+   class="absolute top-4 left-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow transition">
+    ← Volver a página inicial
+</a>
+<div class="min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded shadow-md w-full max-w-4xl">
+        <h2 class="text-3xl font-bold mb-6 text-center text-blue-700">Consulta de Vuelos</h2>
+        <p>vuelos disponibles 101, 102, 103</p>
+        <br>
+        <form id="consultaForm" class="mb-6">
+            <div class="flex items-center gap-4">
+                <input type="number" id="numero" name="numero"
+                       class="flex-1 px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Ingrese número de vuelo" required>
+                <button type="submit"
+                        class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition">
+                    Buscar
+                </button>
+            </div>
+        </form>
+
+        <h3 class="text-xl font-semibold mb-2 text-gray-700">Datos del vuelo</h3>
+        <div class="overflow-x-auto">
+            <table id="tablaVuelo" class="min-w-full border border-gray-300">
+                <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                    <th class="border px-4 py-2">Número</th>
+                    <th class="border px-4 py-2">Fecha Salida</th>
+                    <th class="border px-4 py-2">Aerolínea</th>
+                    <th class="border px-4 py-2">Piloto</th>
+                    <th class="border px-4 py-2">Avión</th>
+                    <th class="border px-4 py-2">Aeropuerto</th>
+                </tr>
+                </thead>
+                <tbody id="tablaVueloBody">
+                <tr>
+                    <td colspan="5" class="text-center text-gray-500 py-4">No hay datos</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3 class="text-xl font-semibold mt-8 mb-2 text-gray-700">Tarifas del Vuelo</h3>
+        <div class="overflow-x-auto">
+            <table id="tablaTarifas" class="min-w-full border border-gray-300">
+                <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                    <th class="border px-4 py-2"># Tarifa</th>
+                    <th class="border px-4 py-2">Impuesto</th>
+                    <th class="border px-4 py-2">Precio</th>
+                    <th class="border px-4 py-2">Clase</th>
+                </tr>
+                </thead>
+                <tbody id="tablaTarifasBody">
+                <tr>
+                    <td colspan="4" class="text-center text-gray-500 py-4">No hay datos</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3 class="text-xl font-semibold mt-8 mb-2 text-gray-700">Asientos del Avión</h3>
+        <div class="overflow-x-auto">
+            <table id="tablaAsientos" class="min-w-full border border-gray-300">
+                <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                    <th class="border px-4 py-2">Fila</th>
+                    <th class="border px-4 py-2">Letra</th>
+                    <th class="border px-4 py-2">Clase</th>
+                </tr>
+                </thead>
+                <tbody id="tablaAsientosBody">
+                <tr>
+                    <td colspan="3" class="text-center text-gray-500 py-4">No hay datos</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="resultado" class="mt-4 text-sm text-red-500"></div>
+    </div>
+</div>
+
+<script>
+    document.getElementById("consultaForm").addEventListener("submit", function(e) {
+        e.preventDefault();
+        const numero = document.getElementById("numero").value;
+
+        fetch(`http://localhost:8080/api/v1/vuelo/buscar?numero=${numero}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Error en la consulta");
+                }
+                return response.json();
+            })
+            .then(data => {
+                // --- Tabla principal de vuelo ---
+                const tbody = document.getElementById("tablaVueloBody");
+                tbody.innerHTML = "";
+                if (!data || !data.numeroVuelo) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-red-500 py-4">No se encontró el vuelo.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = `
+                    <tr class="hover:bg-gray-50">
+                        <td class="border px-4 py-2">${data.numeroVuelo}</td>
+                        <td class="border px-4 py-2">${data.fechaSalida?.fecha ?? "N/D"}</td>
+                        <td class="border px-4 py-2">${data.aerolinea?.nombreAerolinea ?? "N/D"}</td>
+                        <td class="border px-4 py-2">${data.piloto?.nombre ?? "N/D"} ${data.piloto?.apellido ?? ""}</td>
+                        <td class="border px-4 py-2">${data.avion?.numeroAvion ?? "N/D"}</td>
+                    </tr>
+                `;
+
+                // --- Tabla de Tarifas ---
+                const tarifasBody = document.getElementById("tablaTarifasBody");
+                tarifasBody.innerHTML = "";
+                if (data.tarifas && data.tarifas.length > 0) {
+                    data.tarifas.forEach(t => {
+                        tarifasBody.innerHTML += `
+                            <tr>
+                                <td class="border px-4 py-2">${t.numeroTarifa}</td>
+                                <td class="border px-4 py-2">${t.impuestoTarifa}</td>
+                                <td class="border px-4 py-2">$${t.precioTarifa}</td>
+                                <td class="border px-4 py-2">${t.claseTarifa}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tarifasBody.innerHTML = `<tr><td colspan="4" class="text-center text-gray-500 py-4">No hay tarifas registradas.</td></tr>`;
+                }
+
+                // --- Tabla de Asientos ---
+                const asientosBody = document.getElementById("tablaAsientosBody");
+                asientosBody.innerHTML = "";
+                if (data.avion && data.avion.asientos && data.avion.asientos.length > 0) {
+                    data.avion.asientos.forEach(a => {
+                        asientosBody.innerHTML += `
+                            <tr>
+                                <td class="border px-4 py-2">${a.filaAsiento}</td>
+                                <td class="border px-4 py-2">${a.letraAsiento}</td>
+                                <td class="border px-4 py-2">${a.claseAsiento}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    asientosBody.innerHTML = `<tr><td colspan="3" class="text-center text-gray-500 py-4">No hay asientos disponibles.</td></tr>`;
+                }
+
+                // Limpiar errores anteriores
+                document.getElementById("resultado").innerHTML = "";
+            })
+            .catch(error => {
+                document.getElementById("resultado").innerHTML = `<p>${error.message}</p>`;
+            });
+    });
+</script>
+</body>
+</html>
+
