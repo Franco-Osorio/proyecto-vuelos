@@ -45,3 +45,12 @@ El proyecto sigue el patrón **MVC (Model-View-Controller)**:
 
 ```bash
 mvn spring-boot:run
+```
+
+## 📚 Objetivo del proyecto
+
+Proyecto académico orientado a consolidar conocimientos en:
+- Arquitectura MVC
+- Desarrollo backend con Spring Boot
+- Persistencia con JPA
+- Integración con base de datos relacional
